@@ -1,73 +1,77 @@
-# React + TypeScript + Vite
+# Sistema de Reservas - Clube Ecoville II
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Um sistema moderno e intuitivo para o gerenciamento de reservas das áreas de lazer (quadras de tênis e futebol) do condomínio. Desenvolvido com **React**, **TypeScript** e **Vite**, integrado ao **Supabase** para o banco de dados e autenticação.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Tecnologias Utilizadas
 
-## React Compiler
+- **Frontend:** React, TypeScript, Vite
+- **Estilização:** CSS puro, com tema escuro (Dark Mode) moderno
+- **Ícones:** Lucide React
+- **Backend/Banco de Dados:** Supabase (PostgreSQL)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 📋 Funcionalidades Principais
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. **Seleção de Espaço:**
+   - Escolha entre Quadra de Tênis 1 (Azul), Quadra de Tênis 2 (Vermelha) e Campo de Futebol Society.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+2. **Agendamento Inteligente:**
+   - Visualização dos horários disponíveis e ocupados em tempo real na data escolhida.
+   - Bloqueios de regras de negócio: Permitido apenas 1 reserva antecipada por dia por casa/apartamento e reservas subsequentes no mesmo dia só podem ser feitas com 1 hora de antecedência.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+3. **Gerenciamento (Minhas Reservas):**
+   - Os moradores podem visualizar seu histórico de reservas ativas e futuras.
+   - Opção de cancelamento (exclusão) de uma reserva diretamente pela interface.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+4. **Identificação Simples:**
+   - Autenticação facilitada utilizando o Nome do morador e os dados de sua unidade (Rua/Bloco e Número).
+   - "Lembrar login" automático (persistência via `localStorage`).
+
+---
+
+## 🛠️ Como Executar o Projeto Localmente
+
+### Pré-requisitos
+- **Node.js** instalado na máquina.
+
+### Passos
+
+1. Faça o clone do repositório:
+```bash
+git clone https://github.com/SeuUsuario/aluguelQuadras.git
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2. Entre na pasta do projeto:
+```bash
+cd aluguelQuadras
 ```
+
+3. Instale as dependências:
+```bash
+npm install
+```
+
+4. Configure as variáveis de ambiente:
+   - Crie um arquivo `.env.local` na raiz do projeto
+   - Adicione as chaves de conexão do seu banco Supabase (verifique o arquivo de exemplo ou a documentação do Supabase).
+
+5. Inicie o servidor de desenvolvimento:
+```bash
+npm run dev
+```
+
+6. Acesse o projeto no navegador:
+   - Geralmente em `http://localhost:5173`
+
+---
+
+## 🗄️ Estrutura do Banco de Dados (Supabase)
+
+O projeto requer uma tabela `rentals` configurada no Supabase PostgreSQL. Você pode usar o arquivo `supabase.sql` incluído na pasta raiz deste projeto. Basta copiar o conteúdo e executar no editor SQL do painel do seu Supabase para criar a mesma estrutura.
+
+---
+
+Feito com 🎾 e ⚽ para facilitar a diversão no condomínio!
