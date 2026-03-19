@@ -10,6 +10,7 @@ import LoginView from './components/LoginView';
 export type CourtType = 'tennis-blue' | 'tennis-red' | 'soccer';
 
 interface UserProfile {
+  email: string;
   userName: string;
   houseStreet: string;
   houseNumber: string;
@@ -174,18 +175,7 @@ function App() {
   };
 
   if (!userProfile) {
-    return (
-      <div className="min-h-screen" style={{ backgroundImage: 'var(--gradient-bg)' }}>
-        <header className="container py-8 flex justify-center items-center">
-          <img 
-            src="/vintage-logo.png" 
-            alt="Vintage - Arte de Morar" 
-            style={{ height: '60px', objectFit: 'contain' }} 
-          />
-        </header>
-        <LoginView onLogin={handleLogin} />
-      </div>
-    );
+    return <LoginView onLogin={handleLogin} />;
   }
 
   return (
