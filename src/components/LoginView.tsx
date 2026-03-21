@@ -1,167 +1,242 @@
 import React, { useState } from 'react';
-import { User, MapPin, Home, Mail, Lock, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Home,
+  Loader2,
+  Lock,
+  Mail,
+  MapPin,
+  User,
+} from 'lucide-react';
+import BrandLogo from './BrandLogo';
+import { getErrorMessage } from '../lib/errors';
+import { supabase } from '../lib/supabase';
 
-export interface UserProfile {
+interface AuthFormState {
   email: string;
-  password?: string; // Optional because we don't need to pass it everywhere
+  password: string;
   userName: string;
   houseStreet: string;
   houseNumber: string;
 }
 
-interface LoginViewProps {
-  onLogin: (profile: UserProfile) => void;
+const initialFormState: AuthFormState = {
+  email: '',
+  password: '',
+  userName: '',
+  houseStreet: '',
+  houseNumber: '',
+};
+
+function translateAuthError(message: string): string {
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes('invalid login credentials')) {
+    return 'E-mail ou senha invalidos.';
+  }
+
+  if (normalizedMessage.includes('email not confirmed')) {
+    return 'Confirme o e-mail enviado pelo Supabase antes de entrar.';
+  }
+
+  if (normalizedMessage.includes('user already registered')) {
+    return 'Esse e-mail ja esta cadastrado. Faça o login para continuar.';
+  }
+
+  if (normalizedMessage.includes('password should be at least 6 characters')) {
+    return 'A senha precisa ter pelo menos 6 caracteres.';
+  }
+
+  if (normalizedMessage.includes('signup is disabled')) {
+    return 'O cadastro por e-mail esta desativado no Supabase deste projeto.';
+  }
+
+  return message;
 }
 
-const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
+const LoginView: React.FC = () => {
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [formData, setFormData] = useState<UserProfile>({
-    email: '',
-    password: '',
-    userName: '',
-    houseStreet: '',
-    houseNumber: ''
-  });
+  const [infoMsg, setInfoMsg] = useState('');
+  const [formData, setFormData] = useState<AuthFormState>(initialFormState);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setErrorMsg('');
-    
-    const savedUsers: UserProfile[] = JSON.parse(localStorage.getItem('condo_users') || '[]');
-    const emailToFind = formData.email.trim().toLowerCase();
-    
-    if (isLoginMode) {
-      if (!emailToFind || !formData.password) {
-        setErrorMsg('Por favor, preencha o e-mail e a senha.');
-        return;
-      }
+    setInfoMsg('');
 
-      const existingUser = savedUsers.find(u => u.email === emailToFind);
-      if (existingUser) {
-        if (existingUser.password !== formData.password) {
-          setErrorMsg('Senha incorreta.');
-          return;
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password;
+    const userName = formData.userName.trim();
+    const houseStreet = formData.houseStreet.trim();
+    const houseNumber = formData.houseNumber.trim();
+
+    if (!email || !password) {
+      setErrorMsg('Preencha o e-mail e a senha para continuar.');
+      return;
+    }
+
+    if (!isLoginMode && (!userName || !houseStreet || !houseNumber)) {
+      setErrorMsg('Preencha todos os dados da unidade antes de criar a conta.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (isLoginMode) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          throw error;
         }
-        onLogin(existingUser);
       } else {
-        setErrorMsg('E-mail não encontrado. Por favor, crie uma conta.');
-      }
-    } else {
-      // Sign Up Mode
-      const cleanData = {
-        email: emailToFind,
-        password: formData.password,
-        userName: formData.userName.trim(),
-        houseStreet: formData.houseStreet.trim(),
-        houseNumber: formData.houseNumber.trim()
-      };
-      
-      if (cleanData.email && cleanData.password && cleanData.userName && cleanData.houseStreet && cleanData.houseNumber) {
-        if (savedUsers.some((u: any) => u.email === cleanData.email)) {
-           setErrorMsg('Esse e-mail já está cadastrado. Faça o login.');
-           return;
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              user_name: userName,
+              house_street: houseStreet,
+              house_number: houseNumber,
+            },
+          },
+        });
+
+        if (error) {
+          throw error;
         }
-        
-        savedUsers.push(cleanData);
-        localStorage.setItem('condo_users', JSON.stringify(savedUsers));
-        onLogin(cleanData);
-      } else {
-        setErrorMsg('Por favor, preencha todos os campos obrigatórios.');
+
+        if (!data.session) {
+          setInfoMsg(
+            'Conta criada com sucesso. Se a confirmacao por e-mail estiver ativa no Supabase, confirme o link recebido antes de entrar.',
+          );
+          setIsLoginMode(true);
+          setFormData({
+            ...initialFormState,
+            email,
+            password: '',
+          });
+        }
       }
+    } catch (error) {
+      setErrorMsg(
+        translateAuthError(
+          getErrorMessage(error, 'Nao foi possivel concluir a autenticacao.'),
+        ),
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="login-wrapper animate-fade-in" style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundImage: 'url("/clube-fundo.jpg")',
-      backgroundPosition: 'center',
-      backgroundSize: 'cover',
-      backgroundRepeat: 'no-repeat',
-      position: 'relative'
-    }}>
-      {/* Overlay to ensure text readability */}
-      <div style={{
-        position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
-        background: 'linear-gradient(to bottom right, rgba(13, 14, 14, 0.75), rgba(0, 0, 0, 0.95))',
-        zIndex: 0
-      }} />
+    <div
+      className="login-wrapper animate-fade-in"
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundImage: 'url("/clube-fundo.jpg")',
+        backgroundPosition: 'center',
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat',
+        position: 'relative',
+        padding: '2rem 1rem',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'linear-gradient(to bottom right, rgba(13, 14, 14, 0.75), rgba(0, 0, 0, 0.95))',
+          zIndex: 0,
+        }}
+      />
 
-      <div className="login-glass-panel p-12 animate-scale-in" style={{ maxWidth: '500px', width: '90%', position: 'relative', zIndex: 1 }}>
+      <div
+        className="login-glass-panel p-12 animate-scale-in"
+        style={{ maxWidth: '520px', width: '100%', position: 'relative', zIndex: 1 }}
+      >
         <div className="text-center mb-8">
-          <div style={{
-            marginBottom: '1.5rem',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
-          }}>
-            <h1 style={{ 
-              fontFamily: "'Playfair Display', serif", 
-              fontSize: '3rem', 
-              fontWeight: 700, 
-              color: 'var(--text-main)', 
-              lineHeight: 0.9, 
-              letterSpacing: '-0.02em',
-              margin: 0,
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              VINTA
-              <span style={{ 
-                fontFamily: "'Pinyon Script', cursive", 
-                fontSize: '4.8rem', 
-                color: 'var(--primary)', 
-                margin: '0 -5px',
-                height: '45px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                transform: 'translateY(5px)'
-              }}>
-                G
-              </span>
-              E
-            </h1>
-            <span style={{ 
-              fontFamily: "'Great Vibes', cursive", 
-              fontSize: '1.6rem', 
-              color: 'var(--text-main)',
-              marginTop: '-5px',
-              marginLeft: '20px' 
-            }}>
-              Arte de Morar
-            </span>
+          <div className="login-brand-stage">
+            <div className="login-brand-mark">
+              <BrandLogo size="login" />
+            </div>
           </div>
-          <h2 style={{ fontSize: '2.1rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>{isLoginMode ? 'Acessar Conta' : 'Criar Conta'}</h2>
+
+          <h2 style={{ fontSize: '2.1rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>
+            {isLoginMode ? 'Acessar Conta' : 'Criar Conta'}
+          </h2>
           <p className="text-muted" style={{ fontSize: '0.95rem' }}>
-            {isLoginMode ? 'Insira seu e-mail e senha para continuar.' : 'Identifique-se para acessar o sistema de reservas.'}
+            {isLoginMode
+              ? 'Entre com a conta autenticada da sua unidade.'
+              : 'Cadastre nome, rua/bloco e numero para vincular a reserva ao morador.'}
           </p>
         </div>
 
         {errorMsg && (
-          <div className="mb-6 p-4 rounded-md" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div
+            className="mb-6 p-4 rounded-md"
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#ef4444',
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'center',
+            }}
+          >
             <AlertCircle size={18} />
             <span style={{ fontSize: '0.9rem' }}>{errorMsg}</span>
           </div>
         )}
 
+        {infoMsg && (
+          <div
+            className="mb-6 p-4 rounded-md"
+            style={{
+              background: 'rgba(34, 197, 94, 0.08)',
+              border: '1px solid rgba(34, 197, 94, 0.25)',
+              color: '#15803d',
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'center',
+            }}
+          >
+            <CheckCircle2 size={18} />
+            <span style={{ fontSize: '0.9rem' }}>{infoMsg}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
           <div className="form-group">
             <label className="text-sm text-muted">E-mail</label>
             <div className="input-with-icon" style={{ position: 'relative', marginTop: '4px' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <Mail
+                size={18}
+                style={{
+                  position: 'absolute',
+                  left: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                }}
+              />
               <input
                 type="email"
                 required
+                autoComplete="email"
                 style={{ width: '100%', paddingLeft: '3rem' }}
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                 placeholder="seu@email.com"
                 className="input-field"
               />
@@ -171,13 +246,24 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           <div className="form-group">
             <label className="text-sm text-muted">Senha</label>
             <div className="input-with-icon" style={{ position: 'relative', marginTop: '4px' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <Lock
+                size={18}
+                style={{
+                  position: 'absolute',
+                  left: '1rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-muted)',
+                }}
+              />
               <input
                 type="password"
                 required
+                minLength={6}
+                autoComplete={isLoginMode ? 'current-password' : 'new-password'}
                 style={{ width: '100%', paddingLeft: '3rem' }}
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(event) => setFormData({ ...formData, password: event.target.value })}
                 placeholder="••••••••"
                 className="input-field"
               />
@@ -189,30 +275,51 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <div className="form-group">
                 <label className="text-sm text-muted">Nome Completo</label>
                 <div className="input-with-icon" style={{ position: 'relative', marginTop: '4px' }}>
-                  <User size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <User
+                    size={18}
+                    style={{
+                      position: 'absolute',
+                      left: '1rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: 'var(--text-muted)',
+                    }}
+                  />
                   <input
                     type="text"
                     required
+                    autoComplete="name"
                     style={{ width: '100%', paddingLeft: '3rem' }}
                     value={formData.userName}
-                    onChange={(e) => setFormData({ ...formData, userName: e.target.value })}
-                    placeholder="Sérgio Almeida"
+                    onChange={(event) => setFormData({ ...formData, userName: event.target.value })}
+                    placeholder="Sergio Almeida"
                     className="input-field"
                   />
                 </div>
               </div>
 
-              <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
+              <div className="form-row login-form-row">
                 <div className="form-group" style={{ flex: 2 }}>
                   <label className="text-sm text-muted">Rua/Bloco</label>
                   <div className="input-with-icon" style={{ position: 'relative', marginTop: '4px' }}>
-                    <MapPin size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <MapPin
+                      size={18}
+                      style={{
+                        position: 'absolute',
+                        left: '1rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'var(--text-muted)',
+                      }}
+                    />
                     <input
                       type="text"
                       required
                       style={{ width: '100%', paddingLeft: '3rem' }}
                       value={formData.houseStreet}
-                      onChange={(e) => setFormData({ ...formData, houseStreet: e.target.value })}
+                      onChange={(event) =>
+                        setFormData({ ...formData, houseStreet: event.target.value })
+                      }
                       placeholder="Ex: Rua A"
                       className="input-field"
                     />
@@ -220,15 +327,26 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
 
                 <div className="form-group" style={{ flex: 1 }}>
-                  <label className="text-sm text-muted">Número</label>
+                  <label className="text-sm text-muted">Numero</label>
                   <div className="input-with-icon" style={{ position: 'relative', marginTop: '4px' }}>
-                    <Home size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <Home
+                      size={18}
+                      style={{
+                        position: 'absolute',
+                        left: '1rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'var(--text-muted)',
+                      }}
+                    />
                     <input
                       type="text"
                       required
                       style={{ width: '100%', paddingLeft: '3rem' }}
                       value={formData.houseNumber}
-                      onChange={(e) => setFormData({ ...formData, houseNumber: e.target.value })}
+                      onChange={(event) =>
+                        setFormData({ ...formData, houseNumber: event.target.value })
+                      }
                       placeholder="Ex: 42"
                       className="input-field"
                     />
@@ -238,21 +356,42 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             </>
           )}
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem', padding: '1rem' }}>
-            {isLoginMode ? 'Entrar' : 'Cadastrar'}
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: '0.5rem', padding: '1rem' }}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Processando...
+              </>
+            ) : isLoginMode ? (
+              'Entrar'
+            ) : (
+              'Cadastrar'
+            )}
           </button>
-          
+
           <div className="text-center" style={{ marginTop: '0.5rem' }}>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="text-muted"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontSize: '0.9rem' }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                fontSize: '0.9rem',
+              }}
               onClick={() => {
                 setIsLoginMode(!isLoginMode);
                 setErrorMsg('');
+                setInfoMsg('');
               }}
             >
-              {isLoginMode ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entrar'}
+              {isLoginMode ? 'Nao tem conta? Cadastre-se' : 'Ja tem conta? Entrar'}
             </button>
           </div>
         </form>

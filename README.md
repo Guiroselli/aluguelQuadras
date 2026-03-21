@@ -1,77 +1,69 @@
 # Sistema de Reservas - Clube Ecoville II
 
-Um sistema moderno e intuitivo para o gerenciamento de reservas das áreas de lazer (quadras de tênis e futebol) do condomínio. Desenvolvido com **React**, **TypeScript** e **Vite**, integrado ao **Supabase** para o banco de dados e autenticação.
+Aplicacao para reserva de quadras do condominio, desenvolvida com **React**, **TypeScript** e **Vite**, usando **Supabase Auth** para autenticacao e **Supabase Postgres** para persistencia e regras de negocio.
 
----
+## Tecnologias
 
-## 🚀 Tecnologias Utilizadas
+- Frontend: React 19, TypeScript, Vite
+- Estilizacao: CSS puro
+- Icones: Lucide React
+- Backend: Supabase Auth + PostgreSQL
 
-- **Frontend:** React, TypeScript, Vite
-- **Estilização:** CSS puro, com tema escuro (Dark Mode) moderno
-- **Ícones:** Lucide React
-- **Backend/Banco de Dados:** Supabase (PostgreSQL)
+## O que o projeto faz hoje
 
----
+- Cadastro e login por e-mail com vinculo da conta ao morador e a unidade
+- Consulta de horarios ocupados por quadra e por data
+- Reserva com validacao no banco:
+  - 1 hora por reserva
+  - horarios entre 06:00 e 23:00
+  - ate 7 dias de antecedencia
+  - apenas 1 reserva antecipada por dia para a mesma unidade
+  - novas reservas no mesmo dia so com ate 1 hora de antecedencia
+- Cancelamento apenas pelo dono da reserva e com no minimo 2 horas de antecedencia
+- Visualizacao das reservas da conta autenticada
 
-## 📋 Funcionalidades Principais
+## Como rodar localmente
 
-1. **Seleção de Espaço:**
-   - Escolha entre Quadra de Tênis 1 (Azul), Quadra de Tênis 2 (Vermelha) e Campo de Futebol Society.
+1. Instale as dependencias:
 
-2. **Agendamento Inteligente:**
-   - Visualização dos horários disponíveis e ocupados em tempo real na data escolhida.
-   - Bloqueios de regras de negócio: Permitido apenas 1 reserva antecipada por dia por casa/apartamento e reservas subsequentes no mesmo dia só podem ser feitas com 1 hora de antecedência.
-
-3. **Gerenciamento (Minhas Reservas):**
-   - Os moradores podem visualizar seu histórico de reservas ativas e futuras.
-   - Opção de cancelamento (exclusão) de uma reserva diretamente pela interface.
-
-4. **Identificação Simples:**
-   - Autenticação facilitada utilizando o Nome do morador e os dados de sua unidade (Rua/Bloco e Número).
-   - "Lembrar login" automático (persistência via `localStorage`).
-
----
-
-## 🛠️ Como Executar o Projeto Localmente
-
-### Pré-requisitos
-- **Node.js** instalado na máquina.
-
-### Passos
-
-1. Faça o clone do repositório:
-```bash
-git clone https://github.com/SeuUsuario/aluguelQuadras.git
-```
-
-2. Entre na pasta do projeto:
-```bash
-cd aluguelQuadras
-```
-
-3. Instale as dependências:
 ```bash
 npm install
 ```
 
-4. Configure as variáveis de ambiente:
-   - Crie um arquivo `.env.local` na raiz do projeto
-   - Adicione as chaves de conexão do seu banco Supabase (verifique o arquivo de exemplo ou a documentação do Supabase).
+2. Crie o arquivo `.env.local` na raiz com base em `.env.example`.
 
-5. Inicie o servidor de desenvolvimento:
+3. Configure o Supabase:
+   - crie um projeto
+   - habilite `Email` em `Authentication > Providers`
+   - ajuste `URL Configuration` se quiser confirmacao por e-mail
+
+4. Execute o SQL de configuracao em `supabase.sql`.
+
+Importante: o script atual recria a tabela `rentals`, entao ele remove reservas antigas.
+
+5. Inicie o projeto:
+
 ```bash
 npm run dev
 ```
 
-6. Acesse o projeto no navegador:
-   - Geralmente em `http://localhost:5173`
+## Variaveis de ambiente
 
----
+Use estas variaveis no `.env.local`:
 
-## 🗄️ Estrutura do Banco de Dados (Supabase)
+```env
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+```
 
-O projeto requer uma tabela `rentals` configurada no Supabase PostgreSQL. Você pode usar o arquivo `supabase.sql` incluído na pasta raiz deste projeto. Basta copiar o conteúdo e executar no editor SQL do painel do seu Supabase para criar a mesma estrutura.
+O app nao usa mais fallback embutido para URL e chave do Supabase.
 
----
+## Regras garantidas no banco
 
-Feito com 🎾 e ⚽ para facilitar a diversão no condomínio!
+As principais regras do sistema agora sao validadas no PostgreSQL antes de inserir ou cancelar reservas. Isso evita que alguem burle as restricoes alterando apenas o frontend.
+
+## Observacoes
+
+- O arquivo `supabase.sql` foi pensado como setup limpo do ambiente.
+- Contas antigas baseadas em `localStorage` nao sao mais usadas.
+- Para producao, vale configurar confirmacao de e-mail e revisar os redirects do Supabase Auth.
